@@ -27,6 +27,8 @@
 // either expressed or implied, of the FreeBSD Project.
 //
 
+#import <BlocksKit/UIView+BlocksKit.h>
+#import <BlocksKit/UIGestureRecognizer+BlocksKit.h>
 #import "TRAutocompleteView.h"
 #import "TRAutocompleteItemsSource.h"
 #import "TRAutocompletionCellFactory.h"
@@ -48,6 +50,8 @@
     UITableView *_table;
     id <TRAutocompleteItemsSource> _itemsSource;
     id <TRAutocompletionCellFactory> _cellFactory;
+
+    BOOL _showAllOptions;
 }
 
 + (TRAutocompleteView *)autocompleteViewBindedTo:(UITextField *)textField
@@ -59,7 +63,22 @@
                                            textField:textField
                                          itemsSource:itemsSource
                                          cellFactory:factory
-                                          controller:controller];
+                                          controller:controller
+                           showAllOptionsOnBeginEdit:NO];
+}
+
++ (TRAutocompleteView *)autocompleteViewBindedTo:(UITextField *)textField
+                                     usingSource:(id <TRAutocompleteItemsSource>)itemsSource
+                                     cellFactory:(id <TRAutocompletionCellFactory>)factory
+                                    presentingIn:(UIViewController *)controller
+                                    showAllOptionsOnBeginEdit:(BOOL)showAllOptionsOnBeginEdit
+{
+    return [[TRAutocompleteView alloc] initWithFrame:CGRectZero
+                                           textField:textField
+                                         itemsSource:itemsSource
+                                         cellFactory:factory
+                                          controller:controller
+                           showAllOptionsOnBeginEdit:showAllOptionsOnBeginEdit];
 }
 
 - (id)initWithFrame:(CGRect)frame
@@ -67,11 +86,14 @@
         itemsSource:(id <TRAutocompleteItemsSource>)itemsSource
         cellFactory:(id <TRAutocompletionCellFactory>)factory
          controller:(UIViewController *)controller
+        showAllOptionsOnBeginEdit:(BOOL)showAllOptionsOnBeginEdit
 {
     self = [super initWithFrame:frame];
     if (self)
     {
         [self loadDefaults];
+
+        _showAllOptions = showAllOptionsOnBeginEdit;
 
         _queryTextField = textField;
         _itemsSource = itemsSource;
@@ -84,6 +106,22 @@
         _table.separatorStyle = self.separatorStyle;
         _table.delegate = self;
         _table.dataSource = self;
+
+
+        //With this option enabled all the options will be shown when the user clicks the bound textfield
+        if(_showAllOptions){
+            //Add tap gesture recogniser to table view to stop taps going to superview
+            UITapGestureRecognizer *tableTapRecognizer = [[UITapGestureRecognizer alloc] init];
+            [tableTapRecognizer setCancelsTouchesInView:NO];
+            [_table addGestureRecognizer:tableTapRecognizer];
+
+            //Add notifications for begin edit
+            [[NSNotificationCenter defaultCenter]
+                    addObserver:self
+                       selector:@selector(queryChanged:)
+                           name:UITextFieldTextDidBeginEditingNotification
+                         object:_queryTextField];
+        }
 
         [[NSNotificationCenter defaultCenter]
                                addObserver:self
@@ -133,14 +171,19 @@
         kbHeight = kbSize.width;
     }
 
-    CGPoint textPosition = [_queryTextField convertPoint:_queryTextField.bounds.origin toView:nil]; //Taking in account Y position of queryTextField relatively to it's Window
-    
-    CGFloat calculatedY = textPosition.y + _queryTextField.frame.size.height + self.topMargin;
+    CGPoint queryTextOrigin = _queryTextField.frame.origin;
+
+    //if the textField is not a direct subview of the context controller then convert coordinates
+    if(![[_contextController.view subviews] containsObject:_queryTextField]){
+        queryTextOrigin = [_contextController.view convertPoint:_queryTextField.frame.origin fromView:_queryTextField.superview];
+    }
+
+    CGFloat calculatedY = queryTextOrigin.y + _queryTextField.frame.size.height + self.topMargin;
     CGFloat calculatedHeight = contextViewHeight - calculatedY - kbHeight;
 
     calculatedHeight += _contextController.tabBarController.tabBar.frame.size.height; //keyboard is shown over it, need to compensate
 
-    self.frame = CGRectMake(_queryTextField.frame.origin.x,
+    self.frame = CGRectMake(queryTextOrigin.x,
                             calculatedY,
                             _queryTextField.frame.size.width,
                             calculatedHeight);
@@ -164,12 +207,12 @@
                                                                     < _itemsSource.minimumCharactersToTrigger)
                                                                 {
                                                                     self.suggestions = nil;
-                                                                    [self refreshTable];
+                                                                    [_table reloadData];
                                                                 }
                                                                 else
                                                                 {
                                                                     self.suggestions = suggestions;
-                                                                    [self refreshTable];
+                                                                    [_table reloadData];
 
                                                                     if (self.suggestions.count > 0 && !_visible)
                                                                     {
@@ -182,7 +225,7 @@
     else
     {
         self.suggestions = nil;
-        [self refreshTable];
+        [_table reloadData];
     }
 }
 
@@ -226,14 +269,15 @@
         self.didAutocompleteWith(self.selectedSuggestion);
 }
 
-- (void)refreshTable {
-    if (_queryTextField.isFirstResponder) {
-        [_table reloadData];
-    }
-}
-
 - (void)dealloc
 {
+    if(_showAllOptions){
+        [[NSNotificationCenter defaultCenter]
+                removeObserver:self
+                          name:UITextFieldTextDidBeginEditingNotification
+                        object:nil];
+    }
+
     [[NSNotificationCenter defaultCenter]
                            removeObserver:self
                                      name:UITextFieldTextDidChangeNotification

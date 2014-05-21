@@ -50,4 +50,10 @@
                                      cellFactory:(id <TRAutocompletionCellFactory>)factory
                                     presentingIn:(UIViewController *)controller;
 
++ (TRAutocompleteView *)autocompleteViewBindedTo:(UITextField *)textField
+                                     usingSource:(id <TRAutocompleteItemsSource>)itemsSource
+                                     cellFactory:(id <TRAutocompletionCellFactory>)factory
+                                    presentingIn:(UIViewController *)controller
+                       showAllOptionsOnBeginEdit:(BOOL)showAllOptionsOnBeginEdit;
+
 @end
