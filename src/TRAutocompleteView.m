@@ -100,13 +100,18 @@
         _cellFactory = factory;
         _contextController = controller;
 
-        _table = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
+        if (itemsSource.numberOfSections > 1) {
+            _table = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleGrouped];
+        }
+        else {
+            _table = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
+        }
+
         _table.backgroundColor = [UIColor clearColor];
         _table.separatorColor = self.separatorColor;
         _table.separatorStyle = self.separatorStyle;
         _table.delegate = self;
         _table.dataSource = self;
-
 
         //With this option enabled all the options will be shown when the user clicks the bound textfield
         if(_showAllOptions){
@@ -229,9 +234,24 @@
     }
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
-{
-    return self.suggestions.count;
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    if ([_itemsSource respondsToSelector:@selector(numberOfSections)]) {
+        return _itemsSource.numberOfSections;
+    }
+    return 1;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    return _itemsSource.sectionTitles[(NSUInteger) section];
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    if (_itemsSource.numberOfSections > 1) {
+        return ((NSArray *) self.suggestions[(NSUInteger) section]).count;
+    }
+    else {
+        return self.suggestions.count;
+    }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -246,7 +266,8 @@
     NSAssert([cell conformsToProtocol:@protocol(TRAutocompletionCell)], @"Cell must conform TRAutocompletionCell");
     UITableViewCell <TRAutocompletionCell> *completionCell = (UITableViewCell <TRAutocompletionCell> *) cell;
 
-    id suggestion = self.suggestions[(NSUInteger) indexPath.row];
+    id suggestion = [self getSuggestion:indexPath];
+
     NSAssert([suggestion conformsToProtocol:@protocol(TRSuggestionItem)], @"Suggestion item must conform TRSuggestionItem");
     id <TRSuggestionItem> suggestionItem = (id <TRSuggestionItem>) suggestion;
 
@@ -257,7 +278,8 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    id suggestion = self.suggestions[(NSUInteger) indexPath.row];
+    id suggestion = [self getSuggestion:indexPath];
+
     NSAssert([suggestion conformsToProtocol:@protocol(TRSuggestionItem)], @"Suggestion item must conform TRSuggestionItem");
 
     self.selectedSuggestion = (id <TRSuggestionItem>) suggestion;
@@ -267,6 +289,15 @@
 
     if (self.didAutocompleteWith)
         self.didAutocompleteWith(self.selectedSuggestion);
+}
+
+- (id)getSuggestion:(NSIndexPath *)indexPath {
+    if (_itemsSource.numberOfSections > 1) {
+        return self.suggestions[(NSUInteger) indexPath.section][(NSUInteger) indexPath.row];
+    }
+    else {
+        return self.suggestions[(NSUInteger) indexPath.row];
+    }
 }
 
 - (void)dealloc
