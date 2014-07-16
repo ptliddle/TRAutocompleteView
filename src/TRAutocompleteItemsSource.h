@@ -34,10 +34,18 @@
 - (NSUInteger)minimumCharactersToTrigger;
 - (void)itemsFor:(NSString *)query whenReady:(void (^)(NSArray *))suggestionsReady;
 
+//Methods to handle sections
+@optional
+- (NSUInteger)numberOfSections;
+- (NSArray *)sectionTitles;
+
 @end
 
 @protocol TRSuggestionItem <NSObject>
 
 - (NSString *)completionText;
+
+@optional
+- (NSAttributedString *)completionTextAsAttributedString;
 
 @end

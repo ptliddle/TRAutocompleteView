@@ -30,7 +30,7 @@
 #import <Foundation/Foundation.h>
 #import "TRAutocompletionCellFactory.h"
 
-@interface TRGoogleMapsAutocompletionCellFactory : NSObject<TRAutocompletionCellFactory>
+@interface TRSimpleAutocompletionCellFactory : NSObject<TRAutocompletionCellFactory>
 
 - (id)initWithCellForegroundColor:(UIColor *)foregroundColor fontSize:(CGFloat)fontSize;
 

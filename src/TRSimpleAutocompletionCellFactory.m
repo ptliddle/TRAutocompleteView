@@ -27,22 +27,26 @@
 // either expressed or implied, of the FreeBSD Project.
 //
 
-#import "TRGoogleMapsAutocompletionCellFactory.h"
+#import "TRSimpleAutocompletionCellFactory.h"
 #import "TRAutocompleteItemsSource.h"
 
-@interface TRGoogleMapsAutocompletionCell : UITableViewCell <TRAutocompletionCell>
+@interface TRSimpleAutocompletionCell : UITableViewCell <TRAutocompletionCell>
 @end
 
-@implementation TRGoogleMapsAutocompletionCell
+@implementation TRSimpleAutocompletionCell
 
-- (void)updateWith:(id <TRSuggestionItem>)item
-{
-    self.textLabel.text = item.completionText;
+- (void)updateWith:(id <TRSuggestionItem>)item {
+    if ([item respondsToSelector:@selector(completionTextAsAttributedString)]) {
+        self.textLabel.attributedText = item.completionTextAsAttributedString;
+    }
+    else {
+        self.textLabel.text = item.completionText;
+    }
 }
 
 @end
 
-@implementation TRGoogleMapsAutocompletionCellFactory
+@implementation TRSimpleAutocompletionCellFactory
 {
     UIColor *_foregroundColor;
     CGFloat _fontSize;
@@ -62,7 +66,7 @@
 
 - (id <TRAutocompletionCell>)createReusableCellWithIdentifier:(NSString *)identifier
 {
-    TRGoogleMapsAutocompletionCell *cell = [[TRGoogleMapsAutocompletionCell alloc]
+    TRSimpleAutocompletionCell *cell = [[TRSimpleAutocompletionCell alloc]
                                                                             initWithStyle:UITableViewCellStyleDefault
                                                                           reuseIdentifier:identifier];
     cell.textLabel.font = [UIFont systemFontOfSize:_fontSize];
