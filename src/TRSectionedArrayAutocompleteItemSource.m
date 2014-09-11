@@ -99,11 +99,10 @@
         else{
             filteredItems = [self allItemsAsIndexedArray];
         }
-
-        filteredItems = [self checkIfWeHaveResultsMatchingQuery:filteredItems];
-
-        searchResults = [self convertToSuggestionsArray:filteredItems];
     }
+    
+    filteredItems = [self checkIfWeHaveResultsMatchingQuery:filteredItems];
+    searchResults = [self convertToSuggestionsArray:filteredItems];
 
     suggestionsReady(searchResults);
 }
