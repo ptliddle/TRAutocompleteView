@@ -28,11 +28,7 @@
 //
 
 #import "TRGoogleMapsAutocompleteItemsSource.h"
-#ifdef AFNETWORKING_2
-#import "AFHTTPSessionManager.h"
-#else
 #import "AFJSONRequestOperation.h"
-#endif
 #import "TRStringExtensions.h"
 #import "TRGoogleMapsSuggestion.h"
 
@@ -92,50 +88,6 @@
 
 - (void)requestSuggestionsFor:(NSString *)query whenReady:(void (^)(NSArray *))suggestionsReady
 {
-    #ifdef AFNETWORKING_2
-    NSString *urlString = [self autocompleteUrlFor:query];
-    NSLog(@"calling for suggestions %@",urlString);
-    AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
-    manager.requestSerializer = [AFJSONRequestSerializer serializer];
-    manager.responseSerializer = [AFJSONResponseSerializer serializer];
-    [manager GET:urlString
-      parameters:nil
-         success:^(NSURLSessionDataTask *task, id responseObject) {
-             NSLog(@"received response from places: %@",responseObject);
-             NSMutableArray *suggestions = [[NSMutableArray alloc] init];
-             NSArray *predictions = [responseObject objectForKey:@"predictions"];
-             
-             for (NSDictionary *place in predictions)
-             {
-                 TRGoogleMapsSuggestion
-                 *suggestion = [[TRGoogleMapsSuggestion alloc] initWith:[place objectForKey:@"description"]];
-                 [suggestions addObject:suggestion];
-             }
-             
-             if (suggestionsReady)
-                 suggestionsReady(suggestions);
-             
-             @synchronized (self)
-             {
-                 _loading = NO;
-                 
-                 if (_requestToReload)
-                 {
-                     _requestToReload = NO;
-                     [self itemsFor:query whenReady:suggestionsReady];
-                 }
-             }
-         }
-         failure:^(NSURLSessionDataTask *task, NSError *error) {
-             
-             NSLog(@"Error while loading suggestions: %@", error);
-             @synchronized (self)
-             {
-                 _loading = NO;
-             }
-
-         }];
-#else
     NSString *urlString = [self autocompleteUrlFor:query];
     NSURLRequest *urlRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:urlString]];
     
@@ -177,8 +129,6 @@
      }];
     
     [operation start];
-#endif
-
 }
 
 - (NSString*) autocompleteUrlFor:(NSString*)query
